@@ -121,20 +121,20 @@ class MLPlay:
         self.stack_frames = 4
         self.img_size = (84,84)
         self.n_actions = 7
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        
         
         # 設置(不用動這)
         self.input_shape = [self.stack_frames, *self.img_size]
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         
-        success_fun = DeepQNetwork(
+        # 在成功大學建置成功方程式
+        self.success_fun = DeepQNetwork(
             n_actions = self.n_actions,
             input_shape = self.input_shape,
             qnet = QNet,
             device = self.device
         )
         
-
-
 
 
         #**********************************************************************************************************#
@@ -158,14 +158,17 @@ class MLPlay:
         # 4. Update Epsilon value
         # 5. Train Q-Network
         
+        def _preprosess(img):
+            img = cv2.resize(img, (84, 84))
+            img  = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            return img
         
-            
-            
+        
+        
         
         
 
         MAX_EPISODES = int(ENV.get('MAX_EPISODES') or -1)
-        
         
         if state.observation.images.front.data:
             img_array = PAIA.image_to_array(state.observation.images.front.data) #img_array.shape = (112, 252, 3)
@@ -175,14 +178,14 @@ class MLPlay:
             #      Resize:    img  = cv2.resize(img, (width, height))
             
             # 轉成灰階並改變大小
-            img_array = cv2.resize(img_array, (84, 84))
-            img_array  = cv2.cvtColor(img_array, cv2.COLOR_BGR2GRAY)
+            img_array = _preprosess(img_array)
             
             # ****************************************#
         else:
             img_array = None
+            
 
-
+        sstate = [img_array,img_array,img_array,img_array]
 
         #*********************************************************************************************************#
 
@@ -191,18 +194,29 @@ class MLPlay:
         if state.event == PAIA.Event.EVENT_NONE:
             # Continue the game
             # state = env.reset()
+            # state = state.repeat(self.stack_frames, axis=0)
             
             
-
+            act_num = self.success_fun.choose_action(sstate,epsilon=self.epsilon)
+            
+            
             # TODO You can decide your own action (change the following action to yours) *****************************#
-            action = PAIA.create_action_object(acceleration=False, brake=False, steering=0) # 不動
-            action = PAIA.create_action_object(acceleration=True, brake=False, steering=0.0) # 往前走，不轉彎
-            action = PAIA.create_action_object(acceleration=True, brake=False, steering=-1.0) # 往前走，左轉
-            action = PAIA.create_action_object(acceleration=True, brake=False, steering=1.0) # 往前走，右轉
-            action = PAIA.create_action_object(acceleration=False, brake=True, steering=0.0) # 往後走或減速，不轉彎
-            action = PAIA.create_action_object(acceleration=False, brake=True, steering=-1.0) # 往後走或減速，左轉
-            action = PAIA.create_action_object(acceleration=False, brake=True, steering=1.0) # 往後走或減速，右轉
-            
+            if act_num == 0:
+                action = PAIA.create_action_object(acceleration=False, brake=False, steering=0) # 不動
+            elif act_num == 1:
+                action = PAIA.create_action_object(acceleration=True, brake=False, steering=0.0) # 往前走，不轉彎
+            elif act_num == 2:
+                action = PAIA.create_action_object(acceleration=True, brake=False, steering=-1.0) # 往前走，左轉
+            elif act_num == 3:
+                action = PAIA.create_action_object(acceleration=True, brake=False, steering=1.0) # 往前走，右轉
+            elif act_num == 4:
+                action = PAIA.create_action_object(acceleration=False, brake=True, steering=0.0) # 往後走或減速，不轉彎
+            elif act_num == 5:
+                action = PAIA.create_action_object(acceleration=False, brake=True, steering=-1.0) # 往後走或減速，左轉
+            elif act_num == 6:
+                action = PAIA.create_action_object(acceleration=False, brake=True, steering=1.0) # 往後走或減速，右轉
+            else:
+                print("wrong")
 
 
 
